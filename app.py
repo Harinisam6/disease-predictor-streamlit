@@ -35,7 +35,7 @@ if st.session_state['page'] == 1:
         st.session_state['weight'] = weight
         st.session_state['sex'] = sex
         st.session_state['page'] = 2  # go to prediction page
-        st.experimental_rerun()  # safe now
+        st.rerun()  # updated method
 
 # --- Page 2: Symptom selection & prediction ---
 if st.session_state['page'] == 2:
@@ -84,5 +84,5 @@ if st.session_state['page'] == 2:
     if st.button("Start Over"):
         for key in ['name', 'dob', 'age', 'weight', 'sex', 'page']:
             st.session_state.pop(key, None)
-        st.experimental_rerun()
+        st.rerun()  # updated method
 
