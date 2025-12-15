@@ -11,8 +11,12 @@ feature_columns = pickle.load(open("features.pkl", "rb"))
 le = pickle.load(open("label_encoder.pkl", "rb"))
 top_30 = pickle.load(open("top_30_symptoms.pkl", "rb"))
 
+# --- Initialize session state ---
+if 'page' not in st.session_state:
+    st.session_state['page'] = 1  # default to page 1 (user info)
+
 # --- Page 1: User Info ---
-if 'name' not in st.session_state:
+if st.session_state['page'] == 1:
     st.title("🩺 Welcome to Disease Predictor")
     st.subheader("Please enter your details first:")
 
@@ -25,18 +29,18 @@ if 'name' not in st.session_state:
         submitted = st.form_submit_button("Next")
 
     if submitted:
-        # Save to session state
         st.session_state['name'] = name
         st.session_state['dob'] = dob
         st.session_state['age'] = age
         st.session_state['weight'] = weight
         st.session_state['sex'] = sex
-        st.experimental_rerun()  # move to prediction page
+        st.session_state['page'] = 2  # go to prediction page
+        st.experimental_rerun()  # safe now
 
 # --- Page 2: Symptom selection & prediction ---
-if 'name' in st.session_state:
+if st.session_state['page'] == 2:
     st.title(f"Hello {st.session_state['name']}! 🩺")
-    st.subheader("Let's predict your disease based on symptoms")
+    st.subheader("Let's predict your disease based on your symptoms")
 
     # --- User info summary ---
     st.markdown("**Your Info:**")
@@ -70,14 +74,15 @@ if 'name' in st.session_state:
             st.success(disease)
 
             # --- Doctor visit suggestion ---
-            serious_diseases = ['Cancer', 'Heart Disease', 'Diabetes']  # modify as needed
+            serious_diseases = ['Cancer', 'Heart Disease', 'Diabetes']  # adjust per your model
             if disease in serious_diseases:
                 st.warning("⚠️ This seems serious. You should visit a doctor immediately!")
             else:
                 st.info("✅ This seems mild. You can monitor symptoms and consult a doctor if needed.")
 
-    # Optional: Button to reset user info and start over
+    # --- Start Over Button ---
     if st.button("Start Over"):
-        for key in ['name', 'dob', 'age', 'weight', 'sex']:
+        for key in ['name', 'dob', 'age', 'weight', 'sex', 'page']:
             st.session_state.pop(key, None)
         st.experimental_rerun()
+
