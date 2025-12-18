@@ -2,20 +2,20 @@ import streamlit as st
 import pandas as pd
 import pickle
 
-# --- Page config ---
+# PAGE CONFIGURATION
 st.set_page_config(page_title="Disease Predictor", layout="centered")
 
-# --- Load model files ---
+# LOADING ALL THE PKL FILES
 rf_model = pickle.load(open("disease_model.pkl", "rb"))
 feature_columns = pickle.load(open("features.pkl", "rb"))
 le = pickle.load(open("label_encoder.pkl", "rb"))
 top_30 = pickle.load(open("top_30_symptoms.pkl", "rb"))
 
-# --- Initialize session state ---
+# INITIALIZATION FOR THE SESSION
 if 'page' not in st.session_state:
     st.session_state['page'] = 1  # default to page 1 (user info)
 
-# --- Page 1: User Info ---
+# CODE FOR PAGE 1
 if st.session_state['page'] == 1:
     st.title("🩺 Welcome to Disease Predictor")
     st.subheader("Please enter your details first:")
@@ -34,51 +34,50 @@ if st.session_state['page'] == 1:
         st.session_state['age'] = age
         st.session_state['weight'] = weight
         st.session_state['sex'] = sex
-        st.session_state['page'] = 2  # go to prediction page
+        st.session_state['page'] = 2  #AFTER COMPLETION GOES TO NEXT PAGE
         st.rerun()  # updated method
 
-# --- Page 2: Symptom selection & prediction ---
+# SYMTOMS SELECTION IS DONE
 if st.session_state['page'] == 2:
     st.title(f"Hello {st.session_state['name']}! 🩺")
     st.subheader("Let's predict your disease based on your symptoms")
 
-    # --- User info summary ---
+    # USER INFORMATION DISPLAYED FROM PAGE 1
     st.markdown("**Your Info:**")
     st.info(f"**Name:** {st.session_state['name']}\n\n"
             f"**Age:** {st.session_state['age']}\n\n"
             f"**Sex:** {st.session_state['sex']}\n\n"
             f"**Weight:** {st.session_state['weight']} kg")
 
-    # --- Symptoms selection ---
+    # SELECTING THE SYMPTOMS
     selected_symptoms = st.multiselect("Select your symptoms:", top_30)
 
     if st.button("Predict Disease 🩺"):
         if not selected_symptoms:
             st.warning("Please select at least one symptom!")
         else:
-            # Input preparation
             input_df = pd.DataFrame(0, index=[0], columns=feature_columns)
             for s in selected_symptoms:
                 input_df[s] = 1
-
-            # Prediction
+                
+            # PREDICTION OF DISEASE IS DONE
             pred = rf_model.predict(input_df)[0]
             disease = le.classes_[pred]
 
-            # --- Display selected symptoms ---
+            # DISPLAYING ALL SYMPTOMS
             st.markdown("**Your Selected Symptoms:**")
             st.info(", ".join(selected_symptoms))
 
-            # --- Prediction Result ---
+            # PREDICTED DISEASE
             st.markdown("**Predicted Disease:**")
             st.success(disease)
 
-            # --- Doctor visit suggestion ---
+            # TELL WHETHER TO VISIT DOCTOR OR NOT
             serious_diseases = ['Cancer', 'Heart Disease', 'Diabetes']  # adjust per your model
             if disease in serious_diseases:
-                st.warning("⚠️ This seems serious. You should visit a doctor immediately!")
+                st.warning("This seems serious. You should visit a doctor immediately!")
             else:
-                st.info("✅ This seems mild. You can monitor symptoms and consult a doctor if needed.")
+                st.info("This seems mild. You can monitor symptoms and consult a doctor if needed.")
 
     # --- Start Over Button ---
     if st.button("Start Over"):
