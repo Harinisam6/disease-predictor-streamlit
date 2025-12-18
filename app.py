@@ -73,15 +73,15 @@ if st.session_state['page'] == 2:
             st.success(disease)
 
             # TELL WHETHER TO VISIT DOCTOR OR NOT
-            serious_diseases = ['Cancer', 'Heart Disease', 'Diabetes']  # adjust per your model
+            serious_diseases = ['Cancer', 'Heart Disease', 'Diabetes']
             if disease in serious_diseases:
                 st.warning("This seems serious. You should visit a doctor immediately!")
             else:
                 st.info("This seems mild. You can monitor symptoms and consult a doctor if needed.")
 
-    # --- Start Over Button ---
+    # START AGAIN BUTTON
     if st.button("Start Over"):
         for key in ['name', 'dob', 'age', 'weight', 'sex', 'page']:
             st.session_state.pop(key, None)
-        st.rerun()  # updated method
+        st.rerun()  
 
