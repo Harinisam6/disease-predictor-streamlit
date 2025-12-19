@@ -1,45 +1,47 @@
 import streamlit as st
-import pandas as pd
+import pd
 import pickle
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Clinical Decision Support System", layout="centered")
 
-# --- CUSTOM CSS FOR TEXT SIZE ---
+# --- CUSTOM CSS FOR LARGE TEXT & VERTICAL LAYOUT ---
 st.markdown("""
     <style>
-    /* Increase size of the main symptom radio button labels */
-    div[data-testid="stMarkdownContainer"] p {
-        font-size: 1.2rem;
+    .stRadio [data-testid="stWidgetLabel"] p {
+        font-size: 24px !important;
+        font-weight: bold;
+        color: #1E3A8A;
     }
     .stRadio label {
         font-size: 20px !important;
-        font-weight: bold;
+        padding: 10px 0px;
     }
-    /* Style the sub-symptom checkboxes */
     .stCheckbox label {
+        font-size: 18px !important;
+    }
+    .stButton button {
+        height: 3em;
+        width: 100%;
         font-size: 18px !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # --- LOAD MODELS ---
-# Using try-except in case files are missing during testing
 try:
     rf_model = pickle.load(open("disease_model.pkl", "rb"))
     feature_columns = pickle.load(open("features.pkl", "rb"))
     le = pickle.load(open("label_encoder.pkl", "rb"))
-except FileNotFoundError:
-    st.error("Model files not found. Please ensure .pkl files are in the directory.")
+except:
+    st.error("Error: Ensure 'disease_model.pkl', 'features.pkl', and 'label_encoder.pkl' are in the folder.")
     st.stop()
 
-# --- SESSION STATE INIT ---
+# --- SESSION STATE ---
 if "page" not in st.session_state:
     st.session_state.page = 1
 if "sub_symptoms" not in st.session_state:
     st.session_state.sub_symptoms = {}
-if "main_symptom_selected" not in st.session_state:
-    st.session_state.main_symptom_selected = None
 
 # --- CATEGORIZE SYMPTOMS ---
 def auto_categorize_symptoms(symptoms):
@@ -72,95 +74,75 @@ SYMPTOM_TREE = auto_categorize_symptoms(feature_columns)
 
 # --- PAGE 1: USER INFO ---
 if st.session_state.page == 1:
-    st.title("🩺 Clinical Decision Support System")
-    st.subheader("Enter your basic information")
-    
+    st.title("🩺 Patient Registration")
     with st.form("user_form"):
-        name = st.text_input("Name")
-        age = st.number_input("Age", min_value=1, max_value=120)
-        height = st.number_input("Height (cm)", min_value=50, max_value=250)
-        weight = st.number_input("Weight (kg)", min_value=1)
+        name = st.text_input("Full Name")
+        age = st.number_input("Age", min_value=1, max_value=120, value=25)
+        height = st.number_input("Height (cm)", min_value=50, max_value=250, value=170)
+        weight = st.number_input("Weight (kg)", min_value=1, value=70)
         sex = st.selectbox("Sex", ["Male","Female","Other"])
-        submit = st.form_submit_button("Next")
+        submit = st.form_submit_button("Next Step ➔")
     
     if submit:
-        # Calculate BMI
         bmi = round(weight/((height/100)**2),2)
-        if bmi < 18.5: bmi_status = "Underweight"
-        elif bmi < 25: bmi_status = "Normal"
-        elif bmi < 30: bmi_status = "Overweight"
-        else: bmi_status = "Obese"
-        
-        # Save to session state
-        st.session_state.name = name
-        st.session_state.age = age
-        st.session_state.sex = sex
-        st.session_state.bmi = bmi
-        st.session_state.bmi_status = bmi_status
-        st.session_state.page = 2
-        st.rerun() # <--- CRITICAL: This clears Page 1 and refreshes to show Page 2
+        st.session_state.update({
+            "name": name, "age": age, "sex": sex, "bmi": bmi, "page": 2
+        })
+        st.rerun()
 
 # --- PAGE 2: SYMPTOMS & PREDICTION ---
 elif st.session_state.page == 2:
-    st.title(f"Hello {st.session_state['name']}")
-    st.subheader("Symptom-Based Risk Assessment")
-    st.info(f"Age: {st.session_state['age']} | Sex: {st.session_state['sex']} | BMI: {st.session_state['bmi']} ({st.session_state['bmi_status']})")
+    st.title(f"Patient: {st.session_state['name']}")
+    st.info(f"Age: {st.session_state['age']} | Sex: {st.session_state['sex']} | BMI: {st.session_state['bmi']}")
 
-    if st.button("⬅️ Start Over"):
+    if st.button("⬅ Back to Registration"):
         st.session_state.page = 1
-        st.session_state.main_symptom_selected = None
-        st.session_state.sub_symptoms = {}
         st.rerun()
 
-    st.divider()
-
-    # Step 1: Main symptom
-    st.markdown("### **Step 1: Select Main Symptom Category**")
-    main_symptom = st.radio(
-        "Which area is bothering you most?", 
+    st.markdown("---")
+    
+    # Major Symptoms Selection (Vertical List)
+    st.markdown("### 1. Select Primary Symptom Category")
+    main_category = st.radio(
+        "Choose the category that best describes the main issue:",
         options=list(SYMPTOM_TREE.keys()),
-        horizontal=True # Optional: makes it easier to read on wide screens
+        index=0,
+        label_visibility="collapsed" # Hides redundant label since we have a markdown header
     )
-    st.session_state.main_symptom_selected = main_symptom
 
-    # Step 2: Sub-symptoms
-    if st.session_state.main_symptom_selected:
-        st.markdown(f"### **Step 2: Specific Symptoms for {st.session_state.main_symptom_selected}**")
-        available_subs = SYMPTOM_TREE[st.session_state.main_symptom_selected]
+    # Sub-symptoms Selection
+    st.markdown(f"### 2. Specific Symptoms for {main_category}")
+    subs = SYMPTOM_TREE[main_category]
+    
+    for s in subs:
+        col1, col2 = st.columns([3,2])
+        with col1:
+            is_checked = st.checkbox(s.replace("_"," ").title(), key=f"check_{s}")
+        with col2:
+            sev = st.selectbox("Severity", ["Mild","Moderate","Severe"], key=f"sev_{s}")
         
-        if not available_subs:
-            st.write("No specific sub-symptoms listed for this category.")
+        if is_checked:
+            st.session_state.sub_symptoms[s] = {"Mild":1,"Moderate":2,"Severe":3}[sev]
         else:
-            for symptom in available_subs:
-                col1, col2 = st.columns([3,2])
-                with col1:
-                    # Use a key to keep track of checkboxes
-                    checked = st.checkbox(symptom.replace("_"," ").title(), key=f"chk_{symptom}")
-                with col2:
-                    severity = st.selectbox("Severity", ["Mild","Moderate","Severe"], key=f"sev_{symptom}")
-                
-                if checked:
-                    st.session_state.sub_symptoms[symptom] = {"Mild":1,"Moderate":2,"Severe":3}[severity]
-                else:
-                    st.session_state.sub_symptoms.pop(symptom, None)
+            st.session_state.sub_symptoms.pop(s, None)
 
-        st.divider()
-        
-        # Step 3: Prediction
-        if st.button("🔍 Predict Condition", use_container_width=True):
-            if not st.session_state.sub_symptoms:
-                st.error("Please select at least one specific symptom.")
-            else:
-                # Prepare data
-                input_df = pd.DataFrame(0, index=[0], columns=feature_columns)
-                for s, w in st.session_state.sub_symptoms.items():
-                    if s in input_df.columns:
-                        input_df[s] = w
-                
-                # Make prediction
-                pred = rf_model.predict(input_df)[0]
-                result = le.classes_[pred]
-                
-                st.balloons()
-                st.subheader("Probable Condition:")
-                st.success(f"**{result}**")
+    st.markdown("---")
+
+    # Prediction Logic
+    if st.button("Generate Diagnostic Prediction"):
+        if not st.session_state.sub_symptoms:
+            st.error("Please select at least one specific symptom below the category.")
+        else:
+            # Build input row
+            input_data = pd.DataFrame(0, index=[0], columns=feature_columns)
+            for s, weight in st.session_state.sub_symptoms.items():
+                if s in input_data.columns:
+                    input_data[s] = weight
+            
+            # Predict
+            pred_idx = rf_model.predict(input_data)[0]
+            disease = le.classes_[pred_idx]
+            
+            st.subheader("Analysis Result")
+            st.success(f"Based on symptoms, the suspected condition is: **{disease}**")
+            st.warning("Disclaimer: This is an AI-assisted tool and not a substitute for professional medical advice.")
