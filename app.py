@@ -45,13 +45,13 @@ if st.session_state['page'] == 1:
 
         # BMI CATEGORY
         if bmi < 18.5:
-            bmi_status = "YOU'RE UNDERWEIGHT"
+            bmi_status = "UNDERWEIGHT"
         elif 18.5 <= bmi < 25:
-            bmi_status = "YOUR WEIGHT IS NORMAL"
+            bmi_status = "NORMAL"
         elif 25 <= bmi < 30:
-            bmi_status = "YOU'RE OVERWIGHT"
+            bmi_status = "OVERWIGHT"
         else:
-            bmi_status = "YOU'RE OBESE"
+            bmi_status = "OBESE"
 
         # SAVE TO SESSION
         st.session_state['name'] = name
