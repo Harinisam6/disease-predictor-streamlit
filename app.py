@@ -26,16 +26,13 @@ for key in keys:
 
 # --- START OVER BUTTON ---
 if st.button("Start Over"):
-    st.session_state["page"] = 1
-    st.session_state["main_symptom_selected"] = None
-    st.session_state["sub_symptoms"] = {}
-    st.session_state["name"] = None
-    st.session_state["age"] = None
-    st.session_state["height"] = None
-    st.session_state["weight"] = None
-    st.session_state["sex"] = None
-    st.session_state["bmi"] = None
-    st.session_state["bmi_status"] = None
+    for key in keys:
+        if key == "sub_symptoms":
+            st.session_state[key] = {}
+        elif key == "page":
+            st.session_state[key] = 1
+        else:
+            st.session_state[key] = None
 
 # --- CATEGORIZE SYMPTOMS ---
 def auto_categorize_symptoms(symptoms):
@@ -70,6 +67,7 @@ SYMPTOM_TREE = auto_categorize_symptoms(feature_columns)
 if st.session_state["page"] == 1:
     st.title("🩺 Clinical Decision Support System")
     st.subheader("Enter your basic information")
+    
     with st.form("user_form"):
         name = st.text_input("Name")
         age = st.number_input("Age", min_value=1, max_value=120)
@@ -77,6 +75,7 @@ if st.session_state["page"] == 1:
         weight = st.number_input("Weight (kg)", min_value=1)
         sex = st.selectbox("Sex", ["Male","Female","Other"])
         submit = st.form_submit_button("Next")
+    
     if submit:
         bmi = round(weight/((height/100)**2),2)
         if bmi < 18.5: bmi_status = "Underweight"
@@ -94,14 +93,14 @@ if st.session_state["page"] == 2:
     st.subheader("Symptom-Based Risk Assessment")
     st.info(f"Age: {st.session_state['age']} | Sex: {st.session_state['sex']} | BMI: {st.session_state['bmi']} ({st.session_state['bmi_status']})")
 
-    # Main symptom
+    # Step 1: Main symptom (only one)
     if st.session_state["main_symptom_selected"] is None:
         st.subheader("Step 1: Select Main Symptom")
         main_symptom = st.radio("Choose main symptom:", list(SYMPTOM_TREE.keys()))
         if main_symptom:
             st.session_state["main_symptom_selected"] = main_symptom
 
-    # Sub-symptoms
+    # Step 2: Sub-symptoms (show only after main symptom selected)
     if st.session_state["main_symptom_selected"]:
         st.subheader(f"Step 2: Select sub-symptoms for '{st.session_state['main_symptom_selected']}'")
         for symptom in SYMPTOM_TREE[st.session_state["main_symptom_selected"]]:
@@ -115,16 +114,18 @@ if st.session_state["page"] == 2:
             elif symptom in st.session_state["sub_symptoms"]:
                 del st.session_state["sub_symptoms"][symptom]
 
-        # Prediction
+        # Step 3: Prediction
         if st.button("Predict Condition"):
             if not st.session_state["sub_symptoms"]:
                 st.warning("Select at least one sub-symptom.")
             else:
                 input_df = pd.DataFrame(0,index=[0],columns=feature_columns)
                 main_sym = st.session_state["main_symptom_selected"]
+                # Main symptom weight = 3 (severe)
                 for col in feature_columns:
                     if main_sym.lower() in col.lower():
                         input_df[col] = 3
+                # Sub-symptoms
                 for s,w in st.session_state["sub_symptoms"].items():
                     if s in input_df.columns:
                         input_df[s] = w
