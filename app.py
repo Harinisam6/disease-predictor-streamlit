@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import pickle
 
-# --- CONFIG ---
+# --- PAGE CONFIG ---
 st.set_page_config(page_title="Clinical Decision Support System", layout="centered")
 
 # --- LOAD MODEL ---
@@ -45,8 +45,10 @@ SYMPTOM_TREE = auto_categorize_symptoms(feature_columns)
 # --- SESSION INIT ---
 if "page" not in st.session_state:
     st.session_state.page = 1
-if "main_symptom" not in st.session_state:
-    st.session_state.main_symptom = None
+if "main_symptom_selected" not in st.session_state:
+    st.session_state.main_symptom_selected = None
+if "sub_symptoms" not in st.session_state:
+    st.session_state.sub_symptoms = {}
 
 # --- PAGE 1 ---
 if st.session_state.page == 1:
@@ -85,39 +87,53 @@ if st.session_state.page == 2:
     st.subheader("Symptom-Based Risk Assessment")
     st.info(f"Age: {st.session_state.age} | Sex: {st.session_state.sex} | BMI: {st.session_state.bmi} ({st.session_state.bmi_status})")
 
-    # Step 1: Choose main symptom
-    st.subheader("Step 1: Select Main Symptom")
-    main_symptom = st.selectbox("Choose the main symptom", feature_columns)
-    st.session_state.main_symptom = main_symptom
+    # Step 1: Choose main symptom if not already selected
+    if st.session_state.main_symptom_selected is None:
+        st.subheader("Step 1: Select Main Symptom")
+        main_symptom = st.radio("Choose one main symptom:", list(SYMPTOM_TREE.keys()))
+        if main_symptom:
+            st.session_state.main_symptom_selected = main_symptom
 
-    # Step 2: Filter relevant symptoms dynamically
-    st.subheader("Step 2: Select other relevant symptoms & severity")
-    selected_symptoms = {}
-    relevant_symptoms = [s for s in feature_columns if st.session_state.main_symptom.split()[0] in s]  # simple filter
+    # Step 2: Show sub-symptoms of selected main symptom
+    if st.session_state.main_symptom_selected:
+        st.subheader(f"Step 2: Select sub-symptoms for '{st.session_state.main_symptom_selected}'")
+        sub_symptoms = SYMPTOM_TREE[st.session_state.main_symptom_selected]
+        for symptom in sub_symptoms:
+            col1, col2 = st.columns([3,2])
+            with col1:
+                checked = st.checkbox(symptom.replace("_"," ").title(), key=symptom)
+            with col2:
+                severity = st.selectbox("Severity", ["Mild","Moderate","Severe"], key=f"{symptom}_sev")
+            if checked:
+                st.session_state.sub_symptoms[symptom] = {"Mild":1,"Moderate":2,"Severe":3}[severity]
+            elif symptom in st.session_state.sub_symptoms:
+                del st.session_state.sub_symptoms[symptom]
 
-    for symptom in relevant_symptoms:
-        col1, col2 = st.columns([3, 2])
-        with col1:
-            checked = st.checkbox(symptom.replace("_"," ").title(), key=symptom)
-        with col2:
-            severity = st.selectbox("Severity", ["Mild","Moderate","Severe"], key=f"{symptom}_sev")
-        if checked:
-            selected_symptoms[symptom] = {"Mild":1, "Moderate":2, "Severe":3}[severity]
-
-    # Step 3: Predict using model
+    # Step 3: Predict using both main symptom and sub-symptoms
     if st.button("Predict Condition"):
-        if not selected_symptoms:
-            st.warning("Select at least one symptom.")
+        if not st.session_state.sub_symptoms:
+            st.warning("Select at least one sub-symptom.")
         else:
             input_df = pd.DataFrame(0, index=[0], columns=feature_columns)
-            for symptom, weight in selected_symptoms.items():
+            
+            # Include main symptom with default weight 3
+            main_sym = st.session_state.main_symptom_selected
+            for col in feature_columns:
+                if main_sym.lower() in col.lower():
+                    input_df[col] = 3  # assume severe weight for main symptom
+
+            # Include sub-symptoms
+            for symptom, weight in st.session_state.sub_symptoms.items():
                 if symptom in input_df.columns:
                     input_df[symptom] = weight
+
             pred = rf_model.predict(input_df)[0]
             disease = le.classes_[pred]
             st.subheader("Prediction Result")
             st.success(disease)
 
+    # Reset button
     if st.button("Start Over"):
         st.session_state.clear()
         st.session_state.page = 1
+
