@@ -24,16 +24,6 @@ for key in keys:
         else:
             st.session_state[key] = None
 
-# --- START OVER BUTTON ---
-if st.button("Start Over"):
-    for key in keys:
-        if key == "sub_symptoms":
-            st.session_state[key] = {}
-        elif key == "page":
-            st.session_state[key] = 1
-        else:
-            st.session_state[key] = None
-
 # --- CATEGORIZE SYMPTOMS ---
 def auto_categorize_symptoms(symptoms):
     categories = {
@@ -92,6 +82,16 @@ if st.session_state["page"] == 2:
     st.title(f"Hello {st.session_state['name']}")
     st.subheader("Symptom-Based Risk Assessment")
     st.info(f"Age: {st.session_state['age']} | Sex: {st.session_state['sex']} | BMI: {st.session_state['bmi']} ({st.session_state['bmi_status']})")
+
+    # Start Over button here
+    if st.button("Start Over"):
+        for key in keys:
+            if key == "sub_symptoms":
+                st.session_state[key] = {}
+            elif key == "page":
+                st.session_state[key] = 1
+            else:
+                st.session_state[key] = None
 
     # Step 1: Main symptom (only one)
     if st.session_state["main_symptom_selected"] is None:
