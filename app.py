@@ -10,6 +10,31 @@ rf_model = pickle.load(open("disease_model.pkl", "rb"))
 feature_columns = pickle.load(open("features.pkl", "rb"))
 le = pickle.load(open("label_encoder.pkl", "rb"))
 
+# --- SESSION STATE INIT ---
+default_keys = ["page", "main_symptom_selected", "sub_symptoms", "name", "age", "height", "weight", "sex", "bmi", "bmi_status"]
+for key in default_keys:
+    if key not in st.session_state:
+        if key == "page":
+            st.session_state[key] = 1
+        elif key == "sub_symptoms":
+            st.session_state[key] = {}
+        else:
+            st.session_state[key] = None
+
+# --- SAFE START OVER BUTTON AT TOP ---
+if st.button("Start Over"):
+    st.session_state.page = 1
+    st.session_state.main_symptom_selected = None
+    st.session_state.sub_symptoms = {}
+    st.session_state.name = None
+    st.session_state.age = None
+    st.session_state.height = None
+    st.session_state.weight = None
+    st.session_state.sex = None
+    st.session_state.bmi = None
+    st.session_state.bmi_status = None
+    st.experimental_rerun()  # safe because it’s before any UI
+
 # --- CATEGORIZE SYMPTOMS ---
 def auto_categorize_symptoms(symptoms):
     categories = {
@@ -41,19 +66,6 @@ def auto_categorize_symptoms(symptoms):
     return categorized
 
 SYMPTOM_TREE = auto_categorize_symptoms(feature_columns)
-
-# --- SESSION INIT ---
-default_keys = ["page", "main_symptom_selected", "sub_symptoms", "name", "age", "height", "weight", "sex", "bmi", "bmi_status", "start_over"]
-for key in default_keys:
-    if key not in st.session_state:
-        if key == "page":
-            st.session_state[key] = 1
-        elif key == "sub_symptoms":
-            st.session_state[key] = {}
-        elif key == "start_over":
-            st.session_state[key] = False
-        else:
-            st.session_state[key] = None
 
 # --- PAGE 1: Basic Info ---
 if st.session_state.page == 1:
@@ -112,9 +124,9 @@ if st.session_state.page == 2:
                     checked = st.checkbox(symptom.replace("_", " ").title(), key=symptom)
                 with col2:
                     severity = st.selectbox(
-                        "Severity", 
-                        ["Mild", "Moderate", "Severe"], 
-                        key=f"{symptom}_sev", 
+                        "Severity",
+                        ["Mild", "Moderate", "Severe"],
+                        key=f"{symptom}_sev",
                         disabled=not st.session_state.sub_symptoms.get(symptom)
                     )
                 if checked:
@@ -143,23 +155,3 @@ if st.session_state.page == 2:
             disease = le.classes_[pred]
             st.subheader("Prediction Result")
             st.success(disease)
-
-# --- Safe Start Over ---
-if st.button("Start Over"):
-    # Reset session variables safely
-    st.session_state.page = 1
-    st.session_state.main_symptom_selected = None
-    st.session_state.sub_symptoms = {}
-    st.session_state.name = None
-    st.session_state.age = None
-    st.session_state.height = None
-    st.session_state.weight = None
-    st.session_state.sex = None
-    st.session_state.bmi = None
-    st.session_state.bmi_status = None
-    st.session_state.start_over = True  # flag to rerun safely
-
-# Trigger rerun safely on next run
-if st.session_state.start_over:
-    st.session_state.start_over = False
-    st.experimental_rerun()
