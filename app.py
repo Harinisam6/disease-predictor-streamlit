@@ -101,7 +101,7 @@ elif st.session_state.page == 2:
         "Choose the category that best describes the main issue:",
         options=list(SYMPTOM_TREE.keys()),
         index=0,
-        label_visibility="collapsed" # HIIDES RELUCTANT LABEL
+        label_visibility="collapsed")# HIIDES RELUCTANT LABEL
 
     # SUB SYMPTOMS SELECTION
     st.markdown(f"SELECT SPECIFIC SYMPTOMS AND SEVEARITY{main_category}")
