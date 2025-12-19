@@ -59,7 +59,6 @@ if st.session_state.page == 1:
         sex = st.selectbox("Sex", ["Male", "Female", "Other"])
         submit = st.form_submit_button("Next")
 
-    # --- Update session state and rerun outside the form ---
     if submit:
         height_m = height / 100
         bmi = round(weight / (height_m ** 2), 2)
@@ -82,7 +81,6 @@ if st.session_state.page == 1:
             "bmi_status": bmi_status,
             "page": 2
         })
-        st.experimental_rerun()
 
 # --- PAGE 2: SYMPTOMS & PREDICTION ---
 if st.session_state.page == 2:
@@ -146,7 +144,8 @@ if st.session_state.page == 2:
 
     if st.button("Start Over"):
         st.session_state.clear()
-        st.experimental_rerun()
+        st.session_state.page = 1
+
 
 
 
