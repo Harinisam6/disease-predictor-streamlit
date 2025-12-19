@@ -3,119 +3,141 @@ import pandas as pd
 import pickle
 import datetime
 
-# PAGE CONFIGURATION
-st.set_page_config(page_title="Disease Predictor", layout="centered")
+#PAGE CONFIGURATION
+st.set_page_config(page_title="Clinical Decision Support System", layout="centered")
 
-# LOADING ALL THE PKL FILES
+#LOAD MODEL ARTIFACTS
 rf_model = pickle.load(open("disease_model.pkl", "rb"))
 feature_columns = pickle.load(open("features.pkl", "rb"))
 le = pickle.load(open("label_encoder.pkl", "rb"))
-top_30 = pickle.load(open("top_30_symptoms.pkl", "rb"))
 
-# INITIALIZATION FOR THE SESSION
-if 'page' not in st.session_state:
-    st.session_state['page'] = 1
+#ACATEGORIZE SYMPTOMS
+def auto_categorize_symptoms(symptoms):
+    categories = {
+        "Fever Related": ["fever", "chill", "sweat", "temperature"],
+        "Respiratory": ["cough", "breath", "chest", "throat", "nose", "sputum"],
+        "Gastrointestinal": ["abdominal", "stomach", "nausea", "vomit", "diarr", "appetite", "constipation"],
+        "Neurological": ["headache", "dizz", "seizure", "confusion", "memory", "unconscious"],
+        "Skin": ["skin", "rash", "itch", "yellow", "bruise", "ulcer"],
+        "Musculoskeletal": ["joint", "muscle", "pain", "cramp", "weakness", "stiff"],
+        "Urinary / Renal": ["urine", "bladder", "kidney", "burning_micturition"],
+        "Cardiovascular": ["heart", "palpitation", "pressure", "pulse"],
+        "Eye / ENT": ["eye", "ear", "vision", "hearing", "nasal"],
+        "General": ["fatigue", "weight", "loss", "gain", "malaise"]}
+    
+    categorized = {cat: [] for cat in categories}
+    categorized["Other"] = []
 
-# PAGE 1 : USER INFO
-if st.session_state['page'] == 1:
-    st.title("🩺 Welcome to Disease Predictor")
-    st.subheader("Please enter your details first:")
+    for symptom in symptoms:
+        placed = False
+        for cat, keywords in categories.items():
+            if any(k in symptom for k in keywords):
+                categorized[cat].append(symptom)
+                placed = True
+                break
+        if not placed:
+            categorized["Other"].append(symptom)
 
-    with st.form("USER INFORMATION FORM"):
+    return categorized
+
+SYMPTOM_TREE = auto_categorize_symptoms(feature_columns)
+
+#SESSION INIT
+if "page" not in st.session_state:
+    st.session_state.page = 1
+
+#PAGE 1: USER INFO
+if st.session_state.page == 1:
+    st.title("🩺 Clinical Decision Support System")
+    st.subheader("Enter your basic information")
+
+    with st.form("user_form"):
         name = st.text_input("Name")
-
-        dob = st.date_input(
-            "Date of Birth",
-            min_value=datetime.date(1925, 1, 1),
-            max_value=datetime.date(2025, 12, 31),
-            value=datetime.date(2000, 1, 1)
-        )
-
         age = st.number_input("Age", min_value=1, max_value=120)
         height = st.number_input("Height (cm)", min_value=50, max_value=250)
         weight = st.number_input("Weight (kg)", min_value=1)
         sex = st.selectbox("Sex", ["Male", "Female", "Other"])
-
-        submitted = st.form_submit_button("Next")
-
-    if submitted:
-        # BMI CALCULATION
+        submit = st.form_submit_button("Next")
+   if submit:
         height_m = height / 100
         bmi = round(weight / (height_m ** 2), 2)
-
-        # BMI CATEGORY
         if bmi < 18.5:
-            bmi_status = "UNDERWEIGHT"
-        elif 18.5 <= bmi < 25:
-            bmi_status = "NORMAL"
-        elif 25 <= bmi < 30:
-            bmi_status = "OVERWIGHT"
+            bmi_status = "Underweight"
+        elif bmi < 25:
+            bmi_status = "Normal"
+        elif bmi < 30:
+            bmi_status = "Overweight"
         else:
-            bmi_status = "OBESE"
+            bmi_status = "Obese"
 
-        # SAVE TO SESSION
-        st.session_state['name'] = name
-        st.session_state['dob'] = dob
-        st.session_state['age'] = age
-        st.session_state['height'] = height
-        st.session_state['weight'] = weight
-        st.session_state['bmi'] = bmi
-        st.session_state['bmi_status'] = bmi_status
-        st.session_state['sex'] = sex
-        st.session_state['page'] = 2
-
+        st.session_state.update({
+            "name": name,
+            "age": age,
+            "height": height,
+            "weight": weight,
+            "sex": sex,
+            "bmi": bmi,
+            "bmi_status": bmi_status,
+            "page": 2 })
         st.rerun()
+#PAGE 2: SYMPTOMS & PREDICTION
+if st.session_state.page == 2:
+    st.title(f"Hello {st.session_state.name}")
+    st.subheader("Symptom-Based Risk Assessment")
+    st.info(f"Age: {st.session_state.age}\n\n"
+            f"Sex: {st.session_state.sex}\n\n"
+            f"BMI: {st.session_state.bmi} ({st.session_state.bmi_status})")
+    st.subheader("Step 1: Select symptom categories")
+    selected_categories = st.multiselect(
+        "Choose categories",
+        list(SYMPTOM_TREE.keys())
+    selected_symptoms = {}
+    if selected_categories:
+        st.subheader("Step 2: Select symptoms & severity")
+        for category in selected_categories:
+            symptoms = SYMPTOM_TREE[category]
 
-# PAGE 2 : SYMPTOMS & PREDICTION
-if st.session_state['page'] == 2:
-    st.title(f"Hello {st.session_state['name']}! 🩺")
-    st.subheader("LET'S PREDICT YOUR CONDITION BASED ON YOUR SYMPTOMS")
+            for symptom in symptoms:
+                col1, col2 = st.columns([3, 2])
+                with col1:
+                    checked = st.checkbox(symptom.replace("_", " ").title(),
+                        key=symptom)
+                with col2:
+                    severity = st.selectbox(
+                        "Severity",
+                        ["Mild", "Moderate", "Severe"],
+                        key=f"{symptom}_sev")
+               if checked:
+                    selected_symptoms[symptom] = {
+                        "Mild": 1,
+                        "Moderate": 2,
+                        "Severe": 3  }[severity]
+                   
 
-    # USER INFORMATION DISPLAY
-    st.markdown("**YOUR HEALTH PROFILE:**")
-    st.info(
-        f"**Name:** {st.session_state['name']}\n\n"
-        f"**Age:** {st.session_state['age']}\n\n"
-        f"**Sex:** {st.session_state['sex']}\n\n"
-        f"**Height:** {st.session_state['height']} cm\n\n"
-        f"**Weight:** {st.session_state['weight']} kg\n\n"
-        f"**BMI:** {st.session_state['bmi']}\n\n"
-        f"**Weight Status:** {st.session_state['bmi_status']}"
-    )
-
-    # SYMPTOMS SELECTION
-    selected_symptoms = st.multiselect("Select your symptoms:", top_30)
-
-    if st.button("Predict Disease 🩺"):
+    if st.button("Predict Condition"):
         if not selected_symptoms:
-            st.warning("Please select at least one symptom!")
+            st.warning("Please select at least one symptom.")
         else:
             input_df = pd.DataFrame(0, index=[0], columns=feature_columns)
-            for s in selected_symptoms:
-                input_df[s] = 1
 
-            # PREDICTION
+            for symptom, weight in selected_symptoms.items():
+                if symptom in input_df.columns:
+                    input_df[symptom] = weight
+
+            probs = rf_model.predict_proba(input_df)[0]
+            confidence = probs.max()
+
             pred = rf_model.predict(input_df)[0]
             disease = le.classes_[pred]
-
-            # DISPLAY SYMPTOMS
-            st.markdown("**Your Selected Symptoms:**")
-            st.info(", ".join(selected_symptoms))
-
-            # DISPLAY RESULT
-            st.markdown("**Predicted Disease:**")
+            st.subheader("Prediction Result")
             st.success(disease)
-
-            # DOCTOR SUGGESTION
-            serious_diseases = ['Cancer', 'Heart Disease', 'Diabetes']
-            if disease in serious_diseases:
-                st.warning("This seems serious.You should visit a doctor immediately!")
+            if confidence < 0.45:
+                st.warning("Not enough information. Please add more symptoms.")
+            elif confidence < 0.7:
+                st.info("Moderate risk. Medical consultation advised.")
             else:
-                st.info("This seems mild.You can monitor symptoms and consult a doctor if needed.")
-
-    # START AGAIN BUTTON
-    if st.button("Start Over"):
-        for key in list(st.session_state.keys()):
-            st.session_state.pop(key)
+                st.error("High risk detected. Seek medical attention immediately.")
+  if st.button("Start Over"):
+        st.session_state.clear()
         st.rerun()
 
