@@ -101,18 +101,24 @@ if st.session_state.page == 2:
 
     # Step 2: Sub-Symptoms
     if st.session_state.main_symptom_selected:
-        st.subheader(f"Step 2: Select sub-symptoms for '{st.session_state.main_symptom_selected}'")
         sub_symptoms = SYMPTOM_TREE[st.session_state.main_symptom_selected]
-        for symptom in sub_symptoms:
-            col1, col2 = st.columns([3, 2])
-            with col1:
-                checked = st.checkbox(symptom.replace("_", " ").title(), key=symptom)
-            with col2:
-                severity = st.selectbox("Severity", ["Mild", "Moderate", "Severe"], key=f"{symptom}_sev")
-            if checked:
-                st.session_state.sub_symptoms[symptom] = {"Mild": 1, "Moderate": 2, "Severe": 3}[severity]
-            elif symptom in st.session_state.sub_symptoms:
-                del st.session_state.sub_symptoms[symptom]
+        if sub_symptoms:
+            st.subheader(f"Step 2: Select sub-symptoms for '{st.session_state.main_symptom_selected}'")
+            for symptom in sub_symptoms:
+                col1, col2 = st.columns([3, 2])
+                with col1:
+                    checked = st.checkbox(symptom.replace("_", " ").title(), key=symptom)
+                with col2:
+                    severity = st.selectbox(
+                        "Severity", 
+                        ["Mild", "Moderate", "Severe"], 
+                        key=f"{symptom}_sev", 
+                        disabled=not st.session_state.sub_symptoms.get(symptom)
+                    )
+                if checked:
+                    st.session_state.sub_symptoms[symptom] = {"Mild": 1, "Moderate": 2, "Severe": 3}[severity]
+                elif symptom in st.session_state.sub_symptoms:
+                    del st.session_state.sub_symptoms[symptom]
 
     # Step 3: Prediction
     if st.button("Predict Condition"):
@@ -120,6 +126,8 @@ if st.session_state.page == 2:
             st.warning("Select at least one sub-symptom.")
         else:
             input_df = pd.DataFrame(0, index=[0], columns=feature_columns)
+
+            # Map main symptom to feature columns more robustly
             main_sym = st.session_state.main_symptom_selected
             for col in feature_columns:
                 if main_sym.lower() in col.lower():
@@ -134,11 +142,16 @@ if st.session_state.page == 2:
             st.subheader("Prediction Result")
             st.success(disease)
 
-    # Reset button
+    # Safe Reset
     if st.button("Start Over"):
-        for key in default_keys:
-            if key in st.session_state:
-                del st.session_state[key]
         st.session_state.page = 1
+        st.session_state.main_symptom_selected = None
+        st.session_state.sub_symptoms = {}
+        st.session_state.name = None
+        st.session_state.age = None
+        st.session_state.height = None
+        st.session_state.weight = None
+        st.session_state.sex = None
+        st.session_state.bmi = None
+        st.session_state.bmi_status = None
         st.experimental_rerun()
-
