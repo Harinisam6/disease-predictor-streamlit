@@ -43,13 +43,15 @@ def auto_categorize_symptoms(symptoms):
 SYMPTOM_TREE = auto_categorize_symptoms(feature_columns)
 
 # --- SESSION INIT ---
-default_keys = ["page", "main_symptom_selected", "sub_symptoms", "name", "age", "height", "weight", "sex", "bmi", "bmi_status"]
+default_keys = ["page", "main_symptom_selected", "sub_symptoms", "name", "age", "height", "weight", "sex", "bmi", "bmi_status", "start_over"]
 for key in default_keys:
     if key not in st.session_state:
         if key == "page":
             st.session_state[key] = 1
         elif key == "sub_symptoms":
             st.session_state[key] = {}
+        elif key == "start_over":
+            st.session_state[key] = False
         else:
             st.session_state[key] = None
 
@@ -127,7 +129,7 @@ if st.session_state.page == 2:
         else:
             input_df = pd.DataFrame(0, index=[0], columns=feature_columns)
 
-            # Map main symptom to feature columns more robustly
+            # Map main symptom to feature columns robustly
             main_sym = st.session_state.main_symptom_selected
             for col in feature_columns:
                 if main_sym.lower() in col.lower():
@@ -143,11 +145,8 @@ if st.session_state.page == 2:
             st.success(disease)
 
 # --- Safe Start Over ---
-if "start_over" not in st.session_state:
-    st.session_state.start_over = False
-
 if st.button("Start Over"):
-    # Reset all session variables
+    # Reset session variables safely
     st.session_state.page = 1
     st.session_state.main_symptom_selected = None
     st.session_state.sub_symptoms = {}
@@ -158,8 +157,7 @@ if st.button("Start Over"):
     st.session_state.sex = None
     st.session_state.bmi = None
     st.session_state.bmi_status = None
-    # Set rerun flag instead of calling rerun immediately
-    st.session_state.start_over = True
+    st.session_state.start_over = True  # flag to rerun safely
 
 # Trigger rerun safely on next run
 if st.session_state.start_over:
