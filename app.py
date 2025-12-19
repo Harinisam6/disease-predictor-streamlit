@@ -26,12 +26,18 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # LOAD MODELS (XGBOOST)
+import os
+
+st.write("FILES IN CURRENT DIRECTORY:")
+st.write(os.listdir())
+
 try:
     model = pickle.load(open("disease_model.pkl", "rb"))
     feature_columns = pickle.load(open("features.pkl", "rb"))
     le = pickle.load(open("label_encoder.pkl", "rb"))
-except:
-    st.error("Error: Ensure 'disease_model.pkl', 'features.pkl', and 'label_encoder.pkl' are in the folder.")
+except Exception as e:
+    st.error("MODEL LOAD FAILED")
+    st.write(e)
     st.stop()
 
 # SESSION STATE
