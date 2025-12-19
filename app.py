@@ -136,4 +136,4 @@ elif st.session_state.page == 2:
             disease = le.classes_[pred_idx]
             
             st.subheader("ANALYSSI REPORT")
-            st.success(f"BASED UPON THE SELECTION SYMPTOMS,THE CNDITION IS**{disease}**")
+            st.success(f"BASED UPON THE SELECTION SYMPTOMS,THE CONDITION IS **{disease}**")
