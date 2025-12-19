@@ -2,15 +2,15 @@ import streamlit as st
 import pandas as pd
 import pickle
 
-# PAGE CONFIGURATION
+# --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Clinical Decision Support System", layout="centered")
 
-# LOAD MODEL ARTIFACTS
+# --- LOAD MODEL ARTIFACTS ---
 rf_model = pickle.load(open("disease_model.pkl", "rb"))
 feature_columns = pickle.load(open("features.pkl", "rb"))
 le = pickle.load(open("label_encoder.pkl", "rb"))
 
-# CATEGORIZE SYMPTOMS
+# --- CATEGORIZE SYMPTOMS ---
 def auto_categorize_symptoms(symptoms):
     categories = {
         "Fever Related": ["fever", "chill", "sweat", "temperature"],
@@ -42,11 +42,11 @@ def auto_categorize_symptoms(symptoms):
 
 SYMPTOM_TREE = auto_categorize_symptoms(feature_columns)
 
-# SESSION INIT
+# --- SESSION INIT ---
 if "page" not in st.session_state:
     st.session_state.page = 1
 
-# PAGE 1: USER INFO
+# --- PAGE 1: USER INFO ---
 if st.session_state.page == 1:
     st.title("🩺 Clinical Decision Support System")
     st.subheader("Enter your basic information")
@@ -59,6 +59,7 @@ if st.session_state.page == 1:
         sex = st.selectbox("Sex", ["Male", "Female", "Other"])
         submit = st.form_submit_button("Next")
 
+    # --- Update session state and rerun outside the form ---
     if submit:
         height_m = height / 100
         bmi = round(weight / (height_m ** 2), 2)
@@ -83,11 +84,15 @@ if st.session_state.page == 1:
         })
         st.experimental_rerun()
 
-# PAGE 2: SYMPTOMS & PREDICTION
+# --- PAGE 2: SYMPTOMS & PREDICTION ---
 if st.session_state.page == 2:
     st.title(f"Hello {st.session_state.name}")
     st.subheader("Symptom-Based Risk Assessment")
-    st.info(f"Age: {st.session_state.age}\nSex: {st.session_state.sex}\nBMI: {st.session_state.bmi} ({st.session_state.bmi_status})")
+    st.info(
+        f"Age: {st.session_state.age}\n"
+        f"Sex: {st.session_state.sex}\n"
+        f"BMI: {st.session_state.bmi} ({st.session_state.bmi_status})"
+    )
 
     st.subheader("Step 1: Select symptom categories")
     selected_categories = st.multiselect(
@@ -142,5 +147,6 @@ if st.session_state.page == 2:
     if st.button("Start Over"):
         st.session_state.clear()
         st.experimental_rerun()
+
 
 
