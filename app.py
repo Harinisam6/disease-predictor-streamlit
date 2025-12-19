@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import pickle
+import numpy as np
 
 # PAGE CONFIGURATION
 st.set_page_config(page_title="DISEASE PREDICTION SYSTEM", layout="centered")
@@ -24,9 +25,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# LOAD MODELS
+# LOAD MODELS (XGBOOST)
 try:
-    rf_model = pickle.load(open("disease_model.pkl", "rb"))
+    model = pickle.load(open("disease_model.pkl", "rb"))
     feature_columns = pickle.load(open("features.pkl", "rb"))
     le = pickle.load(open("label_encoder.pkl", "rb"))
 except:
@@ -51,7 +52,8 @@ def auto_categorize_symptoms(symptoms):
         "Urinary / Renal": ["urine","bladder","kidney","burning_micturition"],
         "Cardiovascular": ["heart","palpitation","pressure","pulse"],
         "Eye / ENT": ["eye","ear","vision","hearing","nasal"],
-        "General": ["fatigue","weight","loss","gain","malaise"]}
+        "General": ["fatigue","weight","loss","gain","malaise"]
+    }
     categorized = {cat: [] for cat in categories}
     categorized["Other"] = []
     for s in symptoms:
@@ -79,9 +81,14 @@ if st.session_state.page == 1:
         submit = st.form_submit_button("Next")
     
     if submit:
-        bmi = round(weight/((height/100)**2),2)
+        bmi = round(weight / ((height / 100) ** 2), 2)
         st.session_state.update({
-            "name": name, "age": age, "sex": sex, "bmi": bmi, "page": 2})
+            "name": name,
+            "age": age,
+            "sex": sex,
+            "bmi": bmi,
+            "page": 2
+        })
         st.rerun()
 
 # PAGE 2: SYMPTOMS & PREDICTION
@@ -101,10 +108,11 @@ elif st.session_state.page == 2:
         "Choose the category that best describes the main issue:",
         options=list(SYMPTOM_TREE.keys()),
         index=0,
-        label_visibility="collapsed")# HIIDES RELUCTANT LABEL
+        label_visibility="collapsed"
+    )
 
     # SUB SYMPTOMS SELECTION
-    st.markdown(f"SELECT SPECIFIC SYMPTOMS AND SEVEARITY{main_category}")
+    st.markdown(f"SELECT SPECIFIC SYMPTOMS AND SEVERITY — {main_category}")
     subs = SYMPTOM_TREE[main_category]
     
     for s in subs:
@@ -120,20 +128,23 @@ elif st.session_state.page == 2:
 
     st.markdown("---")
 
-    # PREDICTION LOGIC
+    # PREDICTION LOGIC (XGBOOST)
     if st.button("Generate Diagnostic Prediction"):
         if not st.session_state.sub_symptoms:
             st.error("Please select at least one specific symptom below the category.")
         else:
-            # BUILD THE INPT ROW
+            # BUILD INPUT ROW
             input_data = pd.DataFrame(0, index=[0], columns=feature_columns)
             for s, weight in st.session_state.sub_symptoms.items():
                 if s in input_data.columns:
                     input_data[s] = weight
             
-            # PREDICTION
-            pred_idx = rf_model.predict(input_data)[0]
-            disease = le.classes_[pred_idx]
-            
-            st.subheader("ANALYSSI REPORT")
-            st.success(f"BASED UPON THE SELECTION SYMPTOMS,THE CONDITION IS **{disease}**")
+            # PROBABILITY-BASED PREDICTION
+            probs = model.predict_proba(input_data)[0]
+            top3_idx = np.argsort(probs)[-3:][::-1]
+
+            st.subheader("ANALYSIS REPORT")
+            st.success("BASED UPON THE SELECTED SYMPTOMS, THE MOST LIKELY CONDITIONS ARE:")
+
+            for idx in top3_idx:
+                st.write(f"**{le.classes_[idx]}** — {probs[idx]*100:.2f}%")
