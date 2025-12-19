@@ -142,16 +142,21 @@ if st.session_state.page == 2:
             st.subheader("Prediction Result")
             st.success(disease)
 
-    # Safe Reset
-    if st.button("Start Over"):
-        st.session_state.page = 1
-        st.session_state.main_symptom_selected = None
-        st.session_state.sub_symptoms = {}
-        st.session_state.name = None
-        st.session_state.age = None
-        st.session_state.height = None
-        st.session_state.weight = None
-        st.session_state.sex = None
-        st.session_state.bmi = None
-        st.session_state.bmi_status = None
-        st.experimental_rerun()
+  # --- Safe Reset using a flag ---
+if st.button("Start Over"):
+    st.session_state.page = 1
+    st.session_state.main_symptom_selected = None
+    st.session_state.sub_symptoms = {}
+    st.session_state.name = None
+    st.session_state.age = None
+    st.session_state.height = None
+    st.session_state.weight = None
+    st.session_state.sex = None
+    st.session_state.bmi = None
+    st.session_state.bmi_status = None
+    st.session_state.start_over = True  # flag to rerun safely
+
+# Trigger rerun safely after button click
+if st.session_state.get("start_over"):
+    st.session_state.start_over = False  # reset flag
+    st.experimental_rerun()
