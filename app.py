@@ -11,18 +11,24 @@ feature_columns = pickle.load(open("features.pkl", "rb"))
 le = pickle.load(open("label_encoder.pkl", "rb"))
 
 # --- SESSION STATE INIT ---
-default_keys = ["page", "main_symptom_selected", "sub_symptoms", "name", "age", "height", "weight", "sex", "bmi", "bmi_status"]
+default_keys = [
+    "page", "main_symptom_selected", "sub_symptoms", "name", "age", 
+    "height", "weight", "sex", "bmi", "bmi_status", "start_over"
+]
 for key in default_keys:
     if key not in st.session_state:
         if key == "page":
             st.session_state[key] = 1
         elif key == "sub_symptoms":
             st.session_state[key] = {}
+        elif key == "start_over":
+            st.session_state[key] = False
         else:
             st.session_state[key] = None
 
-# --- SAFE START OVER BUTTON AT TOP ---
-if st.button("Start Over"):
+# --- SAFE RERUN FLAG AT TOP ---
+if st.session_state.start_over:
+    st.session_state.start_over = False
     st.session_state.page = 1
     st.session_state.main_symptom_selected = None
     st.session_state.sub_symptoms = {}
@@ -33,7 +39,11 @@ if st.button("Start Over"):
     st.session_state.sex = None
     st.session_state.bmi = None
     st.session_state.bmi_status = None
-    st.experimental_rerun()  # safe because it’s before any UI
+    st.experimental_rerun()  # Safe: top of script, before any UI
+
+# --- START OVER BUTTON ---
+if st.button("Start Over"):
+    st.session_state.start_over = True
 
 # --- CATEGORIZE SYMPTOMS ---
 def auto_categorize_symptoms(symptoms):
@@ -141,11 +151,10 @@ if st.session_state.page == 2:
         else:
             input_df = pd.DataFrame(0, index=[0], columns=feature_columns)
 
-            # Map main symptom to feature columns robustly
             main_sym = st.session_state.main_symptom_selected
             for col in feature_columns:
                 if main_sym.lower() in col.lower():
-                    input_df[col] = 3  # main symptom = severe
+                    input_df[col] = 3
 
             for symptom, weight in st.session_state.sub_symptoms.items():
                 if symptom in input_df.columns:
