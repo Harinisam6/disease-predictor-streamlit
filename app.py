@@ -26,7 +26,6 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # LOAD MODELS (XGBOOST)
-i# LOAD MODELS (XGBOOST)
 try:
     model = pickle.load(open("disease_model.pkl", "rb"))
     feature_columns = pickle.load(open("features.pkl", "rb"))
