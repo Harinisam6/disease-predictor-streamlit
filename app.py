@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import pickle
 
-# --- PAGE CONFIGURATION ---
+# --- CONFIG ---
 st.set_page_config(page_title="Clinical Decision Support System", layout="centered")
 
-# --- LOAD MODEL ARTIFACTS ---
+# --- LOAD MODEL ---
 rf_model = pickle.load(open("disease_model.pkl", "rb"))
 feature_columns = pickle.load(open("features.pkl", "rb"))
 le = pickle.load(open("label_encoder.pkl", "rb"))
@@ -45,8 +45,10 @@ SYMPTOM_TREE = auto_categorize_symptoms(feature_columns)
 # --- SESSION INIT ---
 if "page" not in st.session_state:
     st.session_state.page = 1
+if "main_symptom" not in st.session_state:
+    st.session_state.main_symptom = None
 
-# --- PAGE 1: USER INFO ---
+# --- PAGE 1 ---
 if st.session_state.page == 1:
     st.title("🩺 Clinical Decision Support System")
     st.subheader("Enter your basic information")
@@ -60,16 +62,11 @@ if st.session_state.page == 1:
         submit = st.form_submit_button("Next")
 
     if submit:
-        height_m = height / 100
-        bmi = round(weight / (height_m ** 2), 2)
-        if bmi < 18.5:
-            bmi_status = "Underweight"
-        elif bmi < 25:
-            bmi_status = "Normal"
-        elif bmi < 30:
-            bmi_status = "Overweight"
-        else:
-            bmi_status = "Obese"
+        bmi = round(weight / ((height/100)**2), 2)
+        if bmi < 18.5: bmi_status = "Underweight"
+        elif bmi < 25: bmi_status = "Normal"
+        elif bmi < 30: bmi_status = "Overweight"
+        else: bmi_status = "Obese"
 
         st.session_state.update({
             "name": name,
@@ -82,70 +79,45 @@ if st.session_state.page == 1:
             "page": 2
         })
 
-# --- PAGE 2: SYMPTOMS & PREDICTION ---
+# --- PAGE 2 ---
 if st.session_state.page == 2:
     st.title(f"Hello {st.session_state.name}")
     st.subheader("Symptom-Based Risk Assessment")
-    st.info(
-        f"Age: {st.session_state.age}\n"
-        f"Sex: {st.session_state.sex}\n"
-        f"BMI: {st.session_state.bmi} ({st.session_state.bmi_status})"
-    )
+    st.info(f"Age: {st.session_state.age} | Sex: {st.session_state.sex} | BMI: {st.session_state.bmi} ({st.session_state.bmi_status})")
 
-    st.subheader("Step 1: Select symptom categories")
-    selected_categories = st.multiselect(
-        "Choose categories",
-        list(SYMPTOM_TREE.keys())
-    )
+    # Step 1: Choose main symptom
+    st.subheader("Step 1: Select Main Symptom")
+    main_symptom = st.selectbox("Choose the main symptom", feature_columns)
+    st.session_state.main_symptom = main_symptom
 
+    # Step 2: Filter relevant symptoms dynamically
+    st.subheader("Step 2: Select other relevant symptoms & severity")
     selected_symptoms = {}
-    if selected_categories:
-        st.subheader("Step 2: Select symptoms & severity")
-        for category in selected_categories:
-            symptoms = SYMPTOM_TREE[category]
+    relevant_symptoms = [s for s in feature_columns if st.session_state.main_symptom.split()[0] in s]  # simple filter
 
-            for symptom in symptoms:
-                col1, col2 = st.columns([3, 2])
-                with col1:
-                    checked = st.checkbox(symptom.replace("_", " ").title(), key=symptom)
-                with col2:
-                    severity = st.selectbox(
-                        "Severity",
-                        ["Mild", "Moderate", "Severe"],
-                        key=f"{symptom}_sev"
-                    )
-                if checked:
-                    selected_symptoms[symptom] = {"Mild": 1, "Moderate": 2, "Severe": 3}[severity]
+    for symptom in relevant_symptoms:
+        col1, col2 = st.columns([3, 2])
+        with col1:
+            checked = st.checkbox(symptom.replace("_"," ").title(), key=symptom)
+        with col2:
+            severity = st.selectbox("Severity", ["Mild","Moderate","Severe"], key=f"{symptom}_sev")
+        if checked:
+            selected_symptoms[symptom] = {"Mild":1, "Moderate":2, "Severe":3}[severity]
 
+    # Step 3: Predict using model
     if st.button("Predict Condition"):
         if not selected_symptoms:
-            st.warning("Please select at least one symptom.")
+            st.warning("Select at least one symptom.")
         else:
             input_df = pd.DataFrame(0, index=[0], columns=feature_columns)
             for symptom, weight in selected_symptoms.items():
                 if symptom in input_df.columns:
                     input_df[symptom] = weight
-
-            probs = rf_model.predict_proba(input_df)[0]
-            confidence = probs.max()
-
             pred = rf_model.predict(input_df)[0]
             disease = le.classes_[pred]
-
             st.subheader("Prediction Result")
             st.success(disease)
-
-            if confidence < 0.45:
-                st.warning("Not enough information. Please add more symptoms.")
-            elif confidence < 0.7:
-                st.info("Moderate risk. Medical consultation advised.")
-            else:
-                st.error("High risk detected. Seek medical attention immediately.")
 
     if st.button("Start Over"):
         st.session_state.clear()
         st.session_state.page = 1
-
-
-
-
