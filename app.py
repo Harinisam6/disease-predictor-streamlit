@@ -5,14 +5,9 @@ import pickle
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Clinical Decision Support System", layout="centered")
 
-# --- LOAD MODEL ---
-rf_model = pickle.load(open("disease_model.pkl", "rb"))
-feature_columns = pickle.load(open("features.pkl", "rb"))
-le = pickle.load(open("label_encoder.pkl", "rb"))
-
 # --- SESSION STATE INIT ---
 default_keys = [
-    "page", "main_symptom_selected", "sub_symptoms", "name", "age", 
+    "page", "main_symptom_selected", "sub_symptoms", "name", "age",
     "height", "weight", "sex", "bmi", "bmi_status", "start_over"
 ]
 for key in default_keys:
@@ -26,9 +21,9 @@ for key in default_keys:
         else:
             st.session_state[key] = None
 
-# --- SAFE RERUN FLAG AT TOP ---
+# --- SAFE DEFERRED RERUN ---
 if st.session_state.start_over:
-    st.session_state.start_over = False
+    # Reset everything
     st.session_state.page = 1
     st.session_state.main_symptom_selected = None
     st.session_state.sub_symptoms = {}
@@ -39,11 +34,21 @@ if st.session_state.start_over:
     st.session_state.sex = None
     st.session_state.bmi = None
     st.session_state.bmi_status = None
-    st.experimental_rerun()  # Safe: top of script, before any UI
+
+    # Clear the flag first
+    st.session_state.start_over = False
+
+    # Rerun safely before rendering any widgets
+    st.experimental_rerun()
 
 # --- START OVER BUTTON ---
 if st.button("Start Over"):
     st.session_state.start_over = True
+
+# --- LOAD MODEL ---
+rf_model = pickle.load(open("disease_model.pkl", "rb"))
+feature_columns = pickle.load(open("features.pkl", "rb"))
+le = pickle.load(open("label_encoder.pkl", "rb"))
 
 # --- CATEGORIZE SYMPTOMS ---
 def auto_categorize_symptoms(symptoms):
@@ -92,10 +97,14 @@ if st.session_state.page == 1:
 
     if submit:
         bmi = round(weight / ((height / 100) ** 2), 2)
-        if bmi < 18.5: bmi_status = "Underweight"
-        elif bmi < 25: bmi_status = "Normal"
-        elif bmi < 30: bmi_status = "Overweight"
-        else: bmi_status = "Obese"
+        if bmi < 18.5:
+            bmi_status = "Underweight"
+        elif bmi < 25:
+            bmi_status = "Normal"
+        elif bmi < 30:
+            bmi_status = "Overweight"
+        else:
+            bmi_status = "Obese"
 
         st.session_state.update({
             "name": name,
