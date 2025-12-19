@@ -80,6 +80,7 @@ if st.session_state.page == 1:
             "bmi_status": bmi_status,
             "page": 2
         })
+        st.experimental_rerun()  # ensures Page 1 disappears completely
 
 # --- PAGE 2 ---
 if st.session_state.page == 2:
@@ -93,6 +94,7 @@ if st.session_state.page == 2:
         main_symptom = st.radio("Choose one main symptom:", list(SYMPTOM_TREE.keys()))
         if main_symptom:
             st.session_state.main_symptom_selected = main_symptom
+            st.experimental_rerun()  # rerun to hide radio after selection
 
     # Step 2: Show sub-symptoms of selected main symptom
     if st.session_state.main_symptom_selected:
@@ -136,4 +138,4 @@ if st.session_state.page == 2:
     if st.button("Start Over"):
         st.session_state.clear()
         st.session_state.page = 1
-
+        st.experimental_rerun()
