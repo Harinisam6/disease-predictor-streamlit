@@ -43,7 +43,7 @@ if "sub_symptoms" not in st.session_state:
 # CATEGORIZE SYMPTOMS
 def auto_categorize_symptoms(symptoms):
     categories = {
-        "Fever Related": ["fever","chill","sweat",],
+        "Fever Related": ["fever","chill","sweat","temperature"],
         "Respiratory": ["cough","breath","chest","throat","nose","sputum"],
         "Gastrointestinal": ["abdominal","stomach","nausea","vomit","diarr","appetite","constipation"],
         "Neurological": ["headache","dizz","seizure","confusion","memory","unconscious"],
@@ -67,7 +67,19 @@ def auto_categorize_symptoms(symptoms):
             categorized["Other"].append(s)
     return categorized
 
-SYMPTOM_TREE = auto_categorize_symptoms(feature_columns)
+SYMPTOM_TREE = { "Fever Related": ["fever","chills","sweating","body_ache"],
+
+    "Respiratory": ["cough","shortness_of_breath","chest_pain","wheezing"],
+
+    "Gastrointestinal": ["nausea","vomiting","diarrhea","abdominal_pain","loss_of_appetite"],
+
+    "Neurological": ["headache", "dizziness", "confusion","seizures"],
+
+    "ENT": ["sore_throat","runny_nose","nasal_congestion","loss-of_smell","ear_pain"],
+
+    "General": ["fatigue","weight_loss","night_sweats","weakness"],
+
+    "Skin": ["rash","itching","redness","swelling"]}
 
 # PAGE 1: USER INFORMATION
 if st.session_state.page == 1:
