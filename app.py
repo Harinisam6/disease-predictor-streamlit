@@ -43,7 +43,7 @@ if "sub_symptoms" not in st.session_state:
 # CATEGORIZE SYMPTOMS
 def auto_categorize_symptoms(symptoms):
     categories = {
-        "Fever Related": ["fever","chill","sweat","temperature"],
+        "Fever Related": ["fever","chill","sweat",],
         "Respiratory": ["cough","breath","chest","throat","nose","sputum"],
         "Gastrointestinal": ["abdominal","stomach","nausea","vomit","diarr","appetite","constipation"],
         "Neurological": ["headache","dizz","seizure","confusion","memory","unconscious"],
