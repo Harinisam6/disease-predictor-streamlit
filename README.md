@@ -15,7 +15,7 @@ A machine learning web app that predicts the likelihood of [disease name, e.g. D
 **Frontend:** HTML, CSS, JavaScript (or React, if used)
 **Backend:** Python, Flask
 **ML/Data:** scikit-learn, pandas, numpy
-**Model:** [e.g. Logistic Regression / Random Forest / SVM / XGBoost]
+**Model:** Random Forest 
 
 ## 📊 Dataset
 
@@ -90,6 +90,3 @@ disease-predictor/
 **Harini S**
 B.Tech AIML, SRM Chennai
 
-## 📄 License
-
-This project is licensed under the MIT License.
